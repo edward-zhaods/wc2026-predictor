@@ -325,22 +325,12 @@
   </div>
   <h1>美加墨世界杯 <span>AI 预测器</span></h1>
   <p>AI 分析球队实力 · 加权物理模拟 · 随机事件系统</p>
-  <div class="api-bar">
-    <label>NVIDIA API Key</label>
-    <input type="password" id="apiKey" placeholder="nvapi-xxxxxxxxxxxx" />
-    <div class="api-status" id="apiStatus"></div>
-  </div>
-  <div class="model-bar">
+  <div class="model-bar" style="margin-top:12px">
     <label>模型</label>
     <select id="modelSelect">
       <option value="meta/llama-3.3-70b-instruct">Llama 3.3 70B (推荐)</option>
       <option value="meta/llama-3.1-8b-instruct">Llama 3.1 8B (更快)</option>
     </select>
-  </div>
-  <div class="api-bar exa">
-    <label>🔍 Exa Key</label>
-    <input type="password" id="exaKey" placeholder="可选 · 填入后 AI 可联网搜索最新资讯" />
-    <div class="api-status" id="exaStatus"></div>
   </div>
 </header>
 
@@ -544,29 +534,12 @@ selA.addEventListener('change', () => updatePick('A'));
 selB.addEventListener('change', () => updatePick('B'));
 updatePick('A'); updatePick('B');
 
-// API key status
-const apiKeyInput = document.getElementById('apiKey');
-const apiStatus = document.getElementById('apiStatus');
-apiKeyInput.addEventListener('input', () => {
-  const v = apiKeyInput.value.trim();
-  apiStatus.className = 'api-status' + (v.startsWith('nvapi-') && v.length > 20 ? ' ok' : '');
-});
-
-const exaKeyInput = document.getElementById('exaKey');
-const exaStatus = document.getElementById('exaStatus');
-exaKeyInput.addEventListener('input', () => {
-  const v = exaKeyInput.value.trim();
-  exaStatus.className = 'api-status' + (v.length > 10 ? ' ok' : '');
-});
 
 // ─── AI ANALYSIS ──────────────────────────────────────────────────────────────
 let strengthA = 50, strengthB = 50;
 let analysisData = null;
 
 async function runAnalysis() {
-  const apiKey = apiKeyInput.value.trim();
-  if (!apiKey) { alert('请先填写 NVIDIA API Key'); return; }
-  const exaKey = exaKeyInput.value.trim();
   const tA = getTeam(selA.value);
   const tB = getTeam(selB.value);
   if (!tA || !tB) return;
@@ -580,7 +553,7 @@ async function runAnalysis() {
   document.getElementById('btnStartSim').disabled = true;
   document.getElementById('analysisSummary').textContent = '';
   document.getElementById('analysisSummary').classList.add('streaming');
-  document.getElementById('analysisTitle').textContent = exaKey ? '🔍 联网搜索 + AI 分析中…' : 'AI 实力分析';
+  document.getElementById('analysisTitle').textContent = '🔍 联网搜索 + AI 分析中…';
 
   // update panel headers
   document.getElementById('taFlagA').textContent = tA.flag;
@@ -596,12 +569,18 @@ async function runAnalysis() {
 
   const model = document.getElementById('modelSelect').value;
   const prompt = `你是 2026 美加墨世界杯的足球比分预测专家。请预测这场比赛：${tA.en}（${tA.name}，FIFA 排名 #${tA.fifa}）对阵 ${tB.en}（${tB.name}，FIFA 排名 #${tB.fifa}）。
-${exaKey ? `\n请先使用 web_search 工具搜索以下内容（用英文）：\n1. "${tA.en} 2026 World Cup squad injuries news"\n2. "${tB.en} 2026 World Cup squad injuries news"\n搜索完成后再综合分析。\n` : ''}
+
+请先使用 web_search 工具搜索以下内容（用英文）：
+1. "${tA.en} 2026 World Cup squad injuries news"
+2. "${tB.en} 2026 World Cup squad injuries news"
+搜索完成后再综合分析。
+
 请综合以下因素给出预测：
 1. 足球实力（球员质量、阵容深度、FIFA 排名）
 2. 足球文化与历史底蕴（世界杯战绩、传统强弱）
 3. 国家经济与体育投入的稳定性
-4. 球队近期状态与风格${exaKey ? '\n5. 刚才搜索到的最新资讯' : ''}
+4. 球队近期状态与风格
+5. 刚才搜索到的最新资讯
 
 只返回一个合法的 JSON 对象（不要 markdown、不要多余文字），结构如下：
 {
@@ -616,26 +595,19 @@ ${exaKey ? `\n请先使用 web_search 工具搜索以下内容（用英文）：
     "cons": ["..."]
   },
   "predictedScore": { "a": <主队预测进球数 0-6 整数>, "b": <客队预测进球数 0-6 整数> },
-  "summary": "<2-3句中文分析，解释为什么是这个比分${exaKey ? '，结合最新资讯' : ''}>"
+  "summary": "<2-3句中文分析，解释为什么是这个比分，结合最新资讯>"
 }`;
 
-  const messages = exaKey
-    ? [{ role: 'system', content: '你是足球预测专家，配备 web_search 工具。请先搜索两队最新情报（用英文搜索），然后综合历史实力+最新资讯给出分析。最终只输出 JSON，不要多余文字。' },
-       { role: 'user', content: prompt }]
-    : [{ role: 'user', content: prompt }];
+  const messages = [
+    { role: 'system', content: '你是足球预测专家，配备 web_search 工具。请先搜索两队最新情报（用英文搜索），然后综合历史实力+最新资讯给出分析。最终只输出 JSON，不要多余文字。' },
+    { role: 'user', content: prompt }
+  ];
 
   try {
     const res = await fetch('/api/predict', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        apiKey,
-        exaKey: exaKey || undefined,
-        model,
-        messages,
-        temperature: 0.7,
-        max_tokens: 1400
-      })
+      body: JSON.stringify({ model, messages, temperature: 0.7, max_tokens: 1400 })
     });
 
     if (!res.ok) {
@@ -678,7 +650,7 @@ ${exaKey ? `\n请先使用 web_search 工具搜索以下内容（用英文）：
     renderTags(document.getElementById('tagsB'), analysisData.teamB.pros, analysisData.teamB.cons);
     document.getElementById('analysisSummary').textContent = analysisData.summary || '';
     document.getElementById('analysisSummary').classList.remove('streaming');
-    document.getElementById('analysisTitle').textContent = exaKey ? '🔍 联网 AI 实力分析' : 'AI 实力分析';
+    document.getElementById('analysisTitle').textContent = '🔍 联网 AI 实力分析';
 
     // ── AI 预测比分 + 20% 随机不可控因素 ──
     const ps = analysisData.predictedScore || { a: 1, b: 1 };
