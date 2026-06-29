@@ -600,7 +600,7 @@ async function runAnalysis() {
 }`;
 
   const messages = [
-    { role: 'system', content: '你是足球预测专家，配备 web_search 工具。请先搜索两队最新情报（用英文搜索），然后综合历史实力+最新资讯给出分析。最终只输出 JSON，不要多余文字。' },
+    { role: 'system', content: '你是足球预测专家，配备 web_search 工具。请先搜索两队最新情报（用英文搜索），然后综合历史实力+最新资讯给出分析。最终只输出 JSON，不要多余文字。重要：JSON 里所有文字字段（pros、cons、summary）必须用简体中文，绝对不要用英文。' },
     { role: 'user', content: prompt }
   ];
 

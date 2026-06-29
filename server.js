@@ -102,7 +102,8 @@ const server = http.createServer((req, res) => {
         let finalStatus = 200, finalBody = null;
 
         for (let round = 0; round < MAX_ROUNDS; round++) {
-          const withTools = round === 0 && !!searchKey;
+          // 全程开 tools，让模型按需多轮搜索；最后一轮强制关掉，逼它输出最终答案
+          const withTools = !!searchKey && round < MAX_ROUNDS - 1;
           const { status, text } = await callNvidia(msgs, apiKey, model, temperature, max_tokens, withTools);
           const data = JSON.parse(text);
 

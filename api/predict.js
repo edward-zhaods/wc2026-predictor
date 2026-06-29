@@ -57,7 +57,8 @@ module.exports = async (req, res) => {
     let finalData = null;
 
     for (let round = 0; round < MAX_ROUNDS; round++) {
-      const withTools = round === 0 && !!searchKey;
+      // 全程开 tools，让模型按需多轮搜索；最后一轮强制关掉，逼它输出最终答案
+      const withTools = !!searchKey && round < MAX_ROUNDS - 1;
       const { status, data } = await callNvidia(msgs, withTools);
 
       if (status !== 200) { res.status(status).json(data); return; }
