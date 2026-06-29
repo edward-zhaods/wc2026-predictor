@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026 FIFA World Cup Predictor</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --green: #1a6b2f;
+    --green-light: #2d8a45;
+    --gold: #f0c040;
+    --white: #ffffff;
+    --gray-dark: #1a1a2e;
+    --gray-mid: #252545;
+    --gray-light: #3a3a5c;
+    --text: #e8e8f0;
+    --text-muted: #9090b0;
+    --red: #e74c3c;
+    --blue: #3498db;
+    --radius: 10px;
+  }
+  body {
+    background: var(--gray-dark);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  header {
+    text-align: center;
+    padding: 20px 16px 10px;
+    background: linear-gradient(180deg, #0d1117 0%, var(--gray-dark) 100%);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .header-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(240,192,64,0.12); border: 1px solid rgba(240,192,64,0.3);
+    border-radius: 20px; padding: 4px 14px; font-size: 12px;
+    color: var(--gold); letter-spacing: 1px; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  header h1 { font-size: 28px; font-weight: 700; color: #fff; line-height: 1.2; }
+  header h1 span { color: var(--gold); }
+  header p { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+  /* API KEY BAR */
+  .api-bar {
+    display: flex; align-items: center; gap: 8px;
+    max-width: 520px; margin: 12px auto 0;
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.04); border-radius: var(--radius);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .api-bar label { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+  .api-bar input {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: var(--text); font-size: 13px; font-family: monospace;
+  }
+  .api-bar input::placeholder { color: #555; }
+  .api-status { width: 8px; height: 8px; border-radius: 50%; background: #555; flex-shrink: 0; }
+  .api-status.ok { background: #2ecc71; }
+  .api-bar.exa { border-color: rgba(46,204,113,0.2); margin-top: 6px; }
+  .api-bar.exa label { color: #2ecc71; }
+  .search-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; color: #2ecc71; background: rgba(46,204,113,0.1);
+    border: 1px solid rgba(46,204,113,0.25); border-radius: 12px;
+    padding: 2px 8px; margin-left: 8px; white-space: nowrap;
+  }
+
+  /* MODEL SELECTOR */
+  .model-bar {
+    display: flex; align-items: center; gap: 8px; justify-content: center;
+    margin: 8px auto 0; max-width: 520px;
+  }
+  .model-bar label { font-size: 12px; color: var(--text-muted); }
+  .model-bar select {
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text); font-size: 12px; border-radius: 6px; padding: 4px 8px;
+    outline: none;
+  }
+
+  /* MAIN LAYOUT */
+  main {
+    max-width: 900px; margin: 0 auto; padding: 20px 16px;
+    display: flex; flex-direction: column; gap: 20px;
+  }
+
+  /* TEAM SELECTOR */
+  .team-selector {
+    display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: start;
+  }
+  .team-card {
+    background: var(--gray-mid); border-radius: var(--radius);
+    border: 1px solid rgba(255,255,255,0.07); padding: 16px;
+  }
+  .team-card h3 { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+  .team-pick {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+    background: rgba(255,255,255,0.04); border-radius: 8px; padding: 10px 12px;
+  }
+  .team-flag { font-size: 32px; line-height: 1; }
+  .team-info { flex: 1; }
+  .team-info .tname { font-size: 16px; font-weight: 600; color: #fff; }
+  .team-info .tgroup { font-size: 12px; color: var(--text-muted); }
+  .team-select {
+    width: 100%; background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1); color: var(--text);
+    font-size: 13px; border-radius: 8px; padding: 8px 10px; outline: none;
+    appearance: none; cursor: pointer;
+  }
+  .team-select option { background: #1e1e3a; }
+  .vs-center {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; padding-top: 32px;
+  }
+  .vs-text { font-size: 26px; font-weight: 800; color: var(--gold); }
+  .vs-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; text-align: center; white-space: nowrap; }
+
+  /* ACTION BUTTON */
+  .btn-predict {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; padding: 14px; border-radius: var(--radius);
+    background: linear-gradient(135deg, #c8a000, #f0c040);
+    color: #1a1000; font-size: 16px; font-weight: 700; border: none;
+    cursor: pointer; letter-spacing: 0.5px; transition: opacity 0.2s;
+  }
+  .btn-predict:hover { opacity: 0.9; }
+  .btn-predict:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-predict svg { width: 20px; height: 20px; }
+
+  /* ANALYSIS PANEL */
+  .analysis-panel {
+    background: var(--gray-mid); border-radius: var(--radius);
+    border: 1px solid rgba(255,255,255,0.07); padding: 20px;
+    display: none;
+  }
+  .analysis-panel.visible { display: block; }
+  .analysis-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+  }
+  .analysis-header h2 { font-size: 16px; font-weight: 600; }
+  .ai-badge {
+    font-size: 11px; background: rgba(52,152,219,0.2); color: var(--blue);
+    border: 1px solid rgba(52,152,219,0.3); border-radius: 12px; padding: 2px 10px;
+  }
+  .analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .team-analysis {
+    background: rgba(255,255,255,0.03); border-radius: 8px; padding: 14px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .team-analysis .ta-header {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+  }
+  .ta-flag { font-size: 24px; }
+  .ta-name { font-size: 14px; font-weight: 600; }
+  .strength-bar-wrap { margin-bottom: 10px; }
+  .strength-label {
+    display: flex; justify-content: space-between; font-size: 12px;
+    color: var(--text-muted); margin-bottom: 4px;
+  }
+  .strength-label span:last-child { color: #fff; font-weight: 600; }
+  .strength-bar {
+    height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden;
+  }
+  .strength-fill {
+    height: 100%; border-radius: 3px;
+    background: linear-gradient(90deg, #2ecc71, #f0c040);
+    transition: width 0.8s ease;
+  }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag {
+    font-size: 11px; padding: 3px 8px; border-radius: 12px;
+    background: rgba(255,255,255,0.07); color: var(--text-muted);
+  }
+  .tag.pos { background: rgba(46,204,113,0.15); color: #2ecc71; }
+  .tag.neg { background: rgba(231,76,60,0.15); color: #e74c3c; }
+
+  .predicted-score {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    background: rgba(240,192,64,0.08); border: 1px solid rgba(240,192,64,0.25);
+    border-radius: 12px; padding: 14px; margin-bottom: 14px;
+  }
+  .ps-label { font-size: 12px; color: var(--gold); font-weight: 600; letter-spacing: 1px; }
+  .ps-row { display: flex; align-items: center; gap: 14px; }
+  .ps-flag { font-size: 30px; }
+  .ps-num { font-size: 40px; font-weight: 800; color: #fff; line-height: 1; }
+  .ps-dash { font-size: 28px; color: var(--text-muted); }
+  .ps-chaos { font-size: 12px; color: #e8a020; min-height: 16px; text-align: center; }
+  .analysis-summary {
+    background: rgba(255,255,255,0.03); border-radius: 8px; padding: 14px;
+    border: 1px solid rgba(255,255,255,0.06); font-size: 13px; line-height: 1.7;
+    color: var(--text-muted); min-height: 60px;
+  }
+  .analysis-summary.streaming::after {
+    content: '▍'; animation: blink 0.7s infinite; color: var(--gold);
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  .start-sim-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; padding: 12px; border-radius: 8px; margin-top: 16px;
+    background: var(--green); color: #fff; font-size: 15px; font-weight: 600;
+    border: none; cursor: pointer; transition: background 0.2s;
+  }
+  .start-sim-btn:hover { background: var(--green-light); }
+  .start-sim-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* SIMULATION AREA */
+  .sim-area {
+    display: none; flex-direction: column; align-items: center; gap: 14px;
+  }
+  .sim-area.visible { display: flex; }
+
+  /* SCOREBOARD */
+  .scoreboard {
+    display: flex; align-items: center; gap: 24px;
+    background: #0d1117; border-radius: 12px; padding: 12px 28px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .sb-team { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .sb-flag { font-size: 28px; }
+  .sb-name { font-size: 12px; color: var(--text-muted); }
+  .sb-score { font-size: 40px; font-weight: 800; color: #fff; line-height: 1; }
+  .sb-mid { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .sb-dash { font-size: 24px; color: #444; }
+  .sb-time { font-size: 11px; color: var(--text-muted); }
+  .sb-target { font-size: 11px; color: var(--gold); }
+
+  /* EVENT TICKER */
+  .event-ticker {
+    width: 100%; max-width: 520px; min-height: 32px;
+    background: rgba(0,0,0,0.3); border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; color: var(--gold); font-weight: 600; text-align: center;
+    padding: 6px 12px; border: 1px solid rgba(255,255,255,0.06);
+  }
+
+  /* CANVAS */
+  canvas {
+    border-radius: 50%; display: block;
+    box-shadow: 0 0 40px rgba(0,0,0,0.6), 0 0 0 3px rgba(255,255,255,0.1);
+  }
+
+  /* SIM CONTROLS */
+  .sim-controls { display: flex; gap: 10px; }
+  .sim-btn {
+    padding: 8px 20px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    border: 1px solid rgba(255,255,255,0.15); cursor: pointer; transition: all 0.2s;
+  }
+  .sim-btn.pause { background: rgba(255,255,255,0.08); color: #fff; }
+  .sim-btn.pause:hover { background: rgba(255,255,255,0.14); }
+  .sim-btn.reset { background: rgba(231,76,60,0.15); color: #e74c3c; border-color: rgba(231,76,60,0.3); }
+  .sim-btn.reset:hover { background: rgba(231,76,60,0.25); }
+
+  /* WINNER BANNER */
+  .winner-banner {
+    display: none; text-align: center; padding: 20px;
+    background: linear-gradient(135deg, rgba(240,192,64,0.15), rgba(240,192,64,0.05));
+    border: 1px solid rgba(240,192,64,0.3); border-radius: var(--radius);
+    width: 100%; max-width: 520px;
+  }
+  .winner-banner.visible { display: block; }
+  .winner-banner .trophy { font-size: 40px; margin-bottom: 6px; }
+  .winner-banner h2 { font-size: 22px; font-weight: 800; color: var(--gold); }
+  .winner-banner p { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+  .winner-banner .final-score {
+    font-size: 32px; font-weight: 800; color: #fff; margin: 8px 0;
+  }
+
+  /* EVENTS LOG */
+  .events-log {
+    width: 100%; max-width: 520px;
+    background: rgba(0,0,0,0.2); border-radius: 8px; padding: 10px 14px;
+    border: 1px solid rgba(255,255,255,0.06); max-height: 120px; overflow-y: auto;
+    display: none;
+  }
+  .events-log.visible { display: block; }
+  .events-log .log-item {
+    font-size: 12px; color: var(--text-muted); padding: 3px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    display: flex; gap: 8px;
+  }
+  .log-item .log-icon { flex-shrink: 0; }
+  .log-item .log-time { color: #555; }
+
+  /* STRENGTH COMPARE */
+  .strength-compare {
+    width: 100%; max-width: 520px;
+    background: rgba(0,0,0,0.2); border-radius: 8px; padding: 10px 14px;
+    border: 1px solid rgba(255,255,255,0.06); font-size: 12px;
+    display: none; gap: 8px; align-items: center;
+  }
+  .strength-compare.visible { display: flex; }
+  .sc-flag { font-size: 18px; }
+  .sc-bar-wrap { flex: 1; height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; display: flex; }
+  .sc-a { background: #2ecc71; transition: width 1s; }
+  .sc-b { background: #e74c3c; transition: width 1s; }
+
+  /* LOADING SPINNER */
+  .spinner {
+    width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.2);
+    border-top-color: var(--gold); border-radius: 50%;
+    animation: spin 0.7s linear infinite; display: inline-block; flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* RESPONSIVE */
+  @media (max-width: 600px) {
+    .team-selector { grid-template-columns: 1fr; }
+    .vs-center { flex-direction: row; padding-top: 0; }
+    .analysis-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-badge">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+    FIFA World Cup 2026
+  </div>
+  <h1>美加墨世界杯 <span>AI 预测器</span></h1>
+  <p>AI 分析球队实力 · 加权物理模拟 · 随机事件系统</p>
+  <div class="api-bar">
+    <label>NVIDIA API Key</label>
+    <input type="password" id="apiKey" placeholder="nvapi-xxxxxxxxxxxx" />
+    <div class="api-status" id="apiStatus"></div>
+  </div>
+  <div class="model-bar">
+    <label>模型</label>
+    <select id="modelSelect">
+      <option value="meta/llama-3.3-70b-instruct">Llama 3.3 70B (推荐)</option>
+      <option value="meta/llama-3.1-8b-instruct">Llama 3.1 8B (更快)</option>
+    </select>
+  </div>
+  <div class="api-bar exa">
+    <label>🔍 Exa Key</label>
+    <input type="password" id="exaKey" placeholder="可选 · 填入后 AI 可联网搜索最新资讯" />
+    <div class="api-status" id="exaStatus"></div>
+  </div>
+</header>
+
+<main>
+  <!-- TEAM SELECTOR -->
+  <div class="team-selector">
+    <div class="team-card">
+      <h3>主队</h3>
+      <div class="team-pick" id="pickA">
+        <div class="team-flag" id="flagA">🇧🇷</div>
+        <div class="team-info">
+          <div class="tname" id="tnameA">巴西</div>
+          <div class="tgroup" id="tgroupA">FIFA #5 · 南美</div>
+        </div>
+      </div>
+      <select class="team-select" id="selectA"></select>
+    </div>
+
+    <div class="vs-center">
+      <div class="vs-text">VS</div>
+      <div class="vs-sub">AI 预测比分</div>
+    </div>
+
+    <div class="team-card">
+      <h3>客队</h3>
+      <div class="team-pick" id="pickB">
+        <div class="team-flag" id="flagB">🇯🇵</div>
+        <div class="team-info">
+          <div class="tname" id="tnameB">日本</div>
+          <div class="tgroup" id="tgroupB">FIFA #15 · 亚洲</div>
+        </div>
+      </div>
+      <select class="team-select" id="selectB"></select>
+    </div>
+  </div>
+
+  <!-- START BUTTON -->
+  <button class="btn-predict" id="btnPredict">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2a10 10 0 110 20A10 10 0 0112 2zm0 4v4l3 3"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg>
+    AI 分析 + 开始预测
+  </button>
+
+  <!-- ANALYSIS PANEL -->
+  <div class="analysis-panel" id="analysisPanel">
+    <div class="analysis-header">
+      <h2 id="analysisTitle">AI 实力分析</h2>
+      <span class="ai-badge">NVIDIA AI</span>
+      <div class="spinner" id="analysisSpin" style="display:none;margin-left:auto"></div>
+    </div>
+    <div class="analysis-grid">
+      <div class="team-analysis" id="taA">
+        <div class="ta-header">
+          <span class="ta-flag" id="taFlagA">🇧🇷</span>
+          <span class="ta-name" id="taNnameA">巴西</span>
+        </div>
+        <div class="strength-bar-wrap">
+          <div class="strength-label"><span>综合实力</span><span id="strengthA">—</span></div>
+          <div class="strength-bar"><div class="strength-fill" id="fillA" style="width:0%"></div></div>
+        </div>
+        <div class="tags" id="tagsA"></div>
+      </div>
+      <div class="team-analysis" id="taB">
+        <div class="ta-header">
+          <span class="ta-flag" id="taFlagB">🇯🇵</span>
+          <span class="ta-name" id="taNnameB">日本</span>
+        </div>
+        <div class="strength-bar-wrap">
+          <div class="strength-label"><span>综合实力</span><span id="strengthB">—</span></div>
+          <div class="strength-bar"><div class="strength-fill" id="fillB" style="width:0%"></div></div>
+        </div>
+        <div class="tags" id="tagsB"></div>
+      </div>
+    </div>
+    <div class="predicted-score" id="predictedScoreBox" style="display:none;">
+      <span class="ps-label">AI 预测比分</span>
+      <div class="ps-row">
+        <span class="ps-flag" id="psFlagA">🇧🇷</span>
+        <span class="ps-num" id="psA">0</span>
+        <span class="ps-dash">:</span>
+        <span class="ps-num" id="psB">0</span>
+        <span class="ps-flag" id="psFlagB">🇯🇵</span>
+      </div>
+      <span class="ps-chaos" id="psChaos"></span>
+    </div>
+    <div class="analysis-summary" id="analysisSummary">等待分析…</div>
+    <button class="start-sim-btn" id="btnStartSim" disabled>
+      ⚽ 观看比赛模拟
+    </button>
+  </div>
+
+  <!-- SIMULATION AREA -->
+  <div class="sim-area" id="simArea">
+    <div class="scoreboard">
+      <div class="sb-team">
+        <div class="sb-flag" id="sbFlagA">🇧🇷</div>
+        <div class="sb-name" id="sbNameA">巴西</div>
+        <div class="sb-score" id="sbScoreA">0</div>
+      </div>
+      <div class="sb-mid">
+        <div class="sb-dash">—</div>
+        <div class="sb-time" id="sbTime">0'</div>
+        <div class="sb-target" id="sbTarget">先到3球</div>
+      </div>
+      <div class="sb-team">
+        <div class="sb-score" id="sbScoreB">0</div>
+        <div class="sb-name" id="sbNameB">日本</div>
+        <div class="sb-flag" id="sbFlagB">🇯🇵</div>
+      </div>
+    </div>
+
+    <div class="strength-compare visible" id="strengthCompare">
+      <span class="sc-flag" id="scFlagA">🇧🇷</span>
+      <div class="sc-bar-wrap">
+        <div class="sc-a" id="scBarA" style="width:50%"></div>
+        <div class="sc-b" id="scBarB" style="width:50%"></div>
+      </div>
+      <span class="sc-flag" id="scFlagB">🇯🇵</span>
+    </div>
+
+    <div class="event-ticker" id="eventTicker">比赛准备中…</div>
+    <canvas id="simCanvas" width="420" height="420"></canvas>
+
+    <div class="winner-banner" id="winnerBanner">
+      <div class="trophy">🏆</div>
+      <div class="final-score" id="winnerScore">3 — 1</div>
+      <h2 id="winnerName">巴西获胜！</h2>
+      <p id="winnerSub">AI 预测结果</p>
+    </div>
+
+    <div class="events-log visible" id="eventsLog"></div>
+
+    <div class="sim-controls">
+      <button class="sim-btn pause" id="btnPause">暂停</button>
+      <button class="sim-btn reset" id="btnSimReset">重新预测</button>
+    </div>
+  </div>
+</main>
+
+<script>
+// ─── TEAM DATA ────────────────────────────────────────────────────────────────
+const TEAMS = [
+  { id:'usa',    flag:'🇺🇸', name:'美国',     en:'United States', fifa:11, conf:'北中美' },
+  { id:'mex',    flag:'🇲🇽', name:'墨西哥',   en:'Mexico',        fifa:15, conf:'北中美' },
+  { id:'can',    flag:'🇨🇦', name:'加拿大',   en:'Canada',        fifa:38, conf:'北中美' },
+  { id:'bra',    flag:'🇧🇷', name:'巴西',     en:'Brazil',        fifa:5,  conf:'南美'   },
+  { id:'arg',    flag:'🇦🇷', name:'阿根廷',   en:'Argentina',     fifa:1,  conf:'南美'   },
+  { id:'fra',    flag:'🇫🇷', name:'法国',     en:'France',        fifa:2,  conf:'欧洲'   },
+  { id:'eng',    flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', name:'英格兰',   en:'England',       fifa:4,  conf:'欧洲'   },
+  { id:'ger',    flag:'🇩🇪', name:'德国',     en:'Germany',       fifa:12, conf:'欧洲'   },
+  { id:'esp',    flag:'🇪🇸', name:'西班牙',   en:'Spain',         fifa:6,  conf:'欧洲'   },
+  { id:'por',    flag:'🇵🇹', name:'葡萄牙',   en:'Portugal',      fifa:7,  conf:'欧洲'   },
+  { id:'ned',    flag:'🇳🇱', name:'荷兰',     en:'Netherlands',   fifa:8,  conf:'欧洲'   },
+  { id:'bel',    flag:'🇧🇪', name:'比利时',   en:'Belgium',       fifa:3,  conf:'欧洲'   },
+  { id:'ita',    flag:'🇮🇹', name:'意大利',   en:'Italy',         fifa:9,  conf:'欧洲'   },
+  { id:'cro',    flag:'🇭🇷', name:'克罗地亚', en:'Croatia',       fifa:10, conf:'欧洲'   },
+  { id:'den',    flag:'🇩🇰', name:'丹麦',     en:'Denmark',       fifa:13, conf:'欧洲'   },
+  { id:'sui',    flag:'🇨🇭', name:'瑞士',     en:'Switzerland',   fifa:14, conf:'欧洲'   },
+  { id:'jpn',    flag:'🇯🇵', name:'日本',     en:'Japan',         fifa:17, conf:'亚洲'   },
+  { id:'kor',    flag:'🇰🇷', name:'韩国',     en:'South Korea',   fifa:22, conf:'亚洲'   },
+  { id:'sau',    flag:'🇸🇦', name:'沙特',     en:'Saudi Arabia',  fifa:56, conf:'亚洲'   },
+  { id:'aus',    flag:'🇦🇺', name:'澳大利亚', en:'Australia',     fifa:23, conf:'亚洲' },
+  { id:'ira',    flag:'🇮🇷', name:'伊朗',     en:'Iran',          fifa:21, conf:'亚洲'   },
+  { id:'mar',    flag:'🇲🇦', name:'摩洛哥',   en:'Morocco',       fifa:14, conf:'非洲'   },
+  { id:'sen',    flag:'🇸🇳', name:'塞内加尔', en:'Senegal',       fifa:18, conf:'非洲'   },
+  { id:'nga',    flag:'🇳🇬', name:'尼日利亚', en:'Nigeria',       fifa:35, conf:'非洲'   },
+  { id:'egy',    flag:'🇪🇬', name:'埃及',     en:'Egypt',         fifa:31, conf:'非洲'   },
+  { id:'col',    flag:'🇨🇴', name:'哥伦比亚', en:'Colombia',      fifa:19, conf:'南美'   },
+  { id:'uru',    flag:'🇺🇾', name:'乌拉圭',   en:'Uruguay',       fifa:20, conf:'南美'   },
+  { id:'ecu',    flag:'🇪🇨', name:'厄瓜多尔', en:'Ecuador',       fifa:44, conf:'南美'   },
+  { id:'chi',    flag:'🇨🇱', name:'智利',     en:'Chile',         fifa:37, conf:'南美'   },
+  { id:'prt',    flag:'🇵🇾', name:'巴拉圭',   en:'Paraguay',      fifa:62, conf:'南美'   },
+  { id:'cmr',    flag:'🇨🇲', name:'喀麦隆',   en:'Cameroon',      fifa:42, conf:'非洲'   },
+  { id:'civ',    flag:'🇨🇮', name:'科特迪瓦', en:"Côte d'Ivoire", fifa:50, conf:'非洲'   },
+];
+
+// ─── POPULATE SELECTS ─────────────────────────────────────────────────────────
+const selA = document.getElementById('selectA');
+const selB = document.getElementById('selectB');
+TEAMS.forEach(t => {
+  [selA, selB].forEach(sel => {
+    const o = document.createElement('option');
+    o.value = t.id;
+    o.textContent = `${t.flag} ${t.name}  (FIFA #${t.fifa})`;
+    sel.appendChild(o);
+  });
+});
+selA.value = 'bra';
+selB.value = 'jpn';
+
+function getTeam(id) { return TEAMS.find(t => t.id === id); }
+
+function updatePick(side) {
+  const sel = side === 'A' ? selA : selB;
+  const t = getTeam(sel.value);
+  if (!t) return;
+  document.getElementById(`flag${side}`).textContent = t.flag;
+  document.getElementById(`tname${side}`).textContent = t.name;
+  document.getElementById(`tgroup${side}`).textContent = `FIFA #${t.fifa} · ${t.conf}`;
+}
+selA.addEventListener('change', () => updatePick('A'));
+selB.addEventListener('change', () => updatePick('B'));
+updatePick('A'); updatePick('B');
+
+// API key status
+const apiKeyInput = document.getElementById('apiKey');
+const apiStatus = document.getElementById('apiStatus');
+apiKeyInput.addEventListener('input', () => {
+  const v = apiKeyInput.value.trim();
+  apiStatus.className = 'api-status' + (v.startsWith('nvapi-') && v.length > 20 ? ' ok' : '');
+});
+
+const exaKeyInput = document.getElementById('exaKey');
+const exaStatus = document.getElementById('exaStatus');
+exaKeyInput.addEventListener('input', () => {
+  const v = exaKeyInput.value.trim();
+  exaStatus.className = 'api-status' + (v.length > 10 ? ' ok' : '');
+});
+
+// ─── AI ANALYSIS ──────────────────────────────────────────────────────────────
+let strengthA = 50, strengthB = 50;
+let analysisData = null;
+
+async function runAnalysis() {
+  const apiKey = apiKeyInput.value.trim();
+  if (!apiKey) { alert('请先填写 NVIDIA API Key'); return; }
+  const exaKey = exaKeyInput.value.trim();
+  const tA = getTeam(selA.value);
+  const tB = getTeam(selB.value);
+  if (!tA || !tB) return;
+  if (tA.id === tB.id) { alert('请选择不同球队'); return; }
+
+  // show panel
+  const panel = document.getElementById('analysisPanel');
+  panel.classList.add('visible');
+  document.getElementById('btnPredict').disabled = true;
+  document.getElementById('analysisSpin').style.display = 'inline-block';
+  document.getElementById('btnStartSim').disabled = true;
+  document.getElementById('analysisSummary').textContent = '';
+  document.getElementById('analysisSummary').classList.add('streaming');
+  document.getElementById('analysisTitle').textContent = exaKey ? '🔍 联网搜索 + AI 分析中…' : 'AI 实力分析';
+
+  // update panel headers
+  document.getElementById('taFlagA').textContent = tA.flag;
+  document.getElementById('taNnameA').textContent = tA.name;
+  document.getElementById('taFlagB').textContent = tB.flag;
+  document.getElementById('taNnameB').textContent = tB.name;
+  document.getElementById('strengthA').textContent = '—';
+  document.getElementById('strengthB').textContent = '—';
+  document.getElementById('fillA').style.width = '0%';
+  document.getElementById('fillB').style.width = '0%';
+  document.getElementById('tagsA').innerHTML = '';
+  document.getElementById('tagsB').innerHTML = '';
+
+  const model = document.getElementById('modelSelect').value;
+  const prompt = `你是 2026 美加墨世界杯的足球比分预测专家。请预测这场比赛：${tA.en}（${tA.name}，FIFA 排名 #${tA.fifa}）对阵 ${tB.en}（${tB.name}，FIFA 排名 #${tB.fifa}）。
+${exaKey ? `\n请先使用 web_search 工具搜索以下内容（用英文）：\n1. "${tA.en} 2026 World Cup squad injuries news"\n2. "${tB.en} 2026 World Cup squad injuries news"\n搜索完成后再综合分析。\n` : ''}
+请综合以下因素给出预测：
+1. 足球实力（球员质量、阵容深度、FIFA 排名）
+2. 足球文化与历史底蕴（世界杯战绩、传统强弱）
+3. 国家经济与体育投入的稳定性
+4. 球队近期状态与风格${exaKey ? '\n5. 刚才搜索到的最新资讯' : ''}
+
+只返回一个合法的 JSON 对象（不要 markdown、不要多余文字），结构如下：
+{
+  "teamA": {
+    "strength": <综合实力整数 1-100>,
+    "pros": ["<最多3个优势，中文，每个不超过6字>"],
+    "cons": ["<最多2个劣势，中文，每个不超过6字>"]
+  },
+  "teamB": {
+    "strength": <综合实力整数 1-100>,
+    "pros": ["..."],
+    "cons": ["..."]
+  },
+  "predictedScore": { "a": <主队预测进球数 0-6 整数>, "b": <客队预测进球数 0-6 整数> },
+  "summary": "<2-3句中文分析，解释为什么是这个比分${exaKey ? '，结合最新资讯' : ''}>"
+}`;
+
+  const messages = exaKey
+    ? [{ role: 'system', content: '你是足球预测专家，配备 web_search 工具。请先搜索两队最新情报（用英文搜索），然后综合历史实力+最新资讯给出分析。最终只输出 JSON，不要多余文字。' },
+       { role: 'user', content: prompt }]
+    : [{ role: 'user', content: prompt }];
+
+  try {
+    const res = await fetch('/api/predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        apiKey,
+        exaKey: exaKey || undefined,
+        model,
+        messages,
+        temperature: 0.7,
+        max_tokens: 1400
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`API 错误 ${res.status}: ${err}`);
+    }
+
+    const data = await res.json();
+    const content = data.choices?.[0]?.message?.content || '';
+
+    // parse JSON from response (handle markdown code blocks)
+    const stripped = content.replace(/```(?:json)?/g, '').trim();
+    const jsonMatch = stripped.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('无法解析 AI 响应，原始内容：' + content.slice(0,200));
+    analysisData = JSON.parse(jsonMatch[0]);
+
+    strengthA = Math.min(95, Math.max(30, analysisData.teamA.strength));
+    strengthB = Math.min(95, Math.max(30, analysisData.teamB.strength));
+
+    // update UI
+    document.getElementById('strengthA').textContent = strengthA;
+    document.getElementById('fillA').style.width = strengthA + '%';
+    document.getElementById('strengthB').textContent = strengthB;
+    document.getElementById('fillB').style.width = strengthB + '%';
+
+    const renderTags = (el, pros, cons) => {
+      el.innerHTML = '';
+      (pros || []).forEach(p => {
+        const span = document.createElement('span');
+        span.className = 'tag pos'; span.textContent = '+ ' + p;
+        el.appendChild(span);
+      });
+      (cons || []).forEach(c => {
+        const span = document.createElement('span');
+        span.className = 'tag neg'; span.textContent = '- ' + c;
+        el.appendChild(span);
+      });
+    };
+    renderTags(document.getElementById('tagsA'), analysisData.teamA.pros, analysisData.teamA.cons);
+    renderTags(document.getElementById('tagsB'), analysisData.teamB.pros, analysisData.teamB.cons);
+    document.getElementById('analysisSummary').textContent = analysisData.summary || '';
+    document.getElementById('analysisSummary').classList.remove('streaming');
+    document.getElementById('analysisTitle').textContent = exaKey ? '🔍 联网 AI 实力分析' : 'AI 实力分析';
+
+    // ── AI 预测比分 + 20% 随机不可控因素 ──
+    const ps = analysisData.predictedScore || { a: 1, b: 1 };
+    let baseA = Math.min(6, Math.max(0, parseInt(ps.a) || 0));
+    let baseB = Math.min(6, Math.max(0, parseInt(ps.b) || 0));
+    const chaos = applyChaos(baseA, baseB);
+    finalA = chaos.a; finalB = chaos.b;
+
+    document.getElementById('psFlagA').textContent = tA.flag;
+    document.getElementById('psFlagB').textContent = tB.flag;
+    document.getElementById('psA').textContent = finalA;
+    document.getElementById('psB').textContent = finalB;
+    document.getElementById('psChaos').textContent = chaos.changed
+      ? `⚡ 意外因素生效：AI 基础预测 ${baseA}:${baseB} → 实际 ${finalA}:${finalB}`
+      : `实力主导 · 含 20% 随机因素`;
+    document.getElementById('predictedScoreBox').style.display = 'flex';
+    document.getElementById('btnStartSim').disabled = false;
+
+  } catch(e) {
+    let msg = e.message;
+    if (msg === 'Failed to fetch' || msg.includes('Failed to fetch')) {
+      msg = '连不上本地服务器。请用「启动.command」运行本程序，不要直接双击 index.html。';
+    }
+    document.getElementById('analysisSummary').textContent = '分析失败：' + msg;
+    document.getElementById('analysisSummary').classList.remove('streaming');
+    document.getElementById('btnPredict').disabled = false;
+  } finally {
+    document.getElementById('analysisSpin').style.display = 'none';
+  }
+}
+
+// 20% 随机不可控因素：80% 跟随 AI 预测，20% 概率发生爆冷/意外改变比分
+function applyChaos(a, b) {
+  let fa = a, fb = b, changed = false;
+  if (Math.random() < 0.20) {
+    changed = true;
+    const r = Math.random();
+    if (r < 0.35) fa += 1;                       // 主队意外多进一球
+    else if (r < 0.70) fb += 1;                  // 客队意外多进一球
+    else if (r < 0.85) fa = Math.max(0, fa - 1); // 主队意外被压制
+    else fb = Math.max(0, fb - 1);               // 客队意外被压制
+  }
+  return { a: Math.min(7, fa), b: Math.min(7, fb), changed };
+}
+
+document.getElementById('btnPredict').addEventListener('click', runAnalysis);
+
+// ─── SIMULATION ───────────────────────────────────────────────────────────────
+const canvas = document.getElementById('simCanvas');
+const ctx = canvas.getContext('2d');
+const W = 420, H = 420, CX = W/2, CY = H/2, R = 190;
+const BALL_R = 22;
+const GOAL_W = 52, GOAL_DEPTH = 20;
+
+let simRunning = false, simPaused = false, animId = null;
+let scoreA_sim = 0, scoreB_sim = 0;
+let finalA = 1, finalB = 1;        // AI 预测（含 20% 随机）的最终比分
+let goalAngle = 0, goalSpeed = 0.013;
+let simFrames = 0;                  // 已播放帧数
+let matchMinute = 0;               // 当前比赛分钟
+let scheduledGoals = [];           // 预定进球时刻 [{minute, team}]
+let eventActive = null, eventTimer = 0;
+let balls_sim = [];
+let logEntries = [];
+
+const MIN_PER_FRAME = 90 / 1700;   // 90 分钟 ≈ 28 秒（60fps）播完
+
+// 纯氛围事件：只影响球的运动观感，不改变比分（比分由 AI 决定）
+const RANDOM_EVENTS = [
+  { id:'wind',  label:'💨 强风突袭，球路飘忽',     effect: 'wind',      prob: 0.002 },
+  { id:'rain',  label:'🌧️ 大雨倾盆，场地湿滑',     effect: 'speed_all', prob: 0.002 },
+  { id:'crowd', label:'📣 全场球迷沸腾助威！',       effect: 'pulse',     prob: 0.002 },
+];
+
+function getSpeedFromStrength(s) { return 1.2 + (s / 100) * 2.0; }
+
+function initBalls() {
+  const spA = getSpeedFromStrength(strengthA);
+  const spB = getSpeedFromStrength(strengthB);
+  const aA = Math.random() * Math.PI * 2;
+  const aB = aA + Math.PI + (Math.random()-0.5) * 0.8;
+  balls_sim = [
+    {
+      x: CX + Math.cos(aA) * 60, y: CY + Math.sin(aA) * 60,
+      vx: Math.cos(aA + Math.PI/2) * spA, vy: Math.sin(aA + Math.PI/2) * spA,
+      team: 'A', baseSpeed: spA,
+      flag: getTeam(selA.value).flag
+    },
+    {
+      x: CX + Math.cos(aB) * 60, y: CY + Math.sin(aB) * 60,
+      vx: Math.cos(aB + Math.PI/2) * spB, vy: Math.sin(aB + Math.PI/2) * spB,
+      team: 'B', baseSpeed: spB,
+      flag: getTeam(selB.value).flag
+    }
+  ];
+}
+
+function drawField() {
+  ctx.clearRect(0,0,W,H);
+  // clip to circle
+  ctx.save();
+  ctx.beginPath(); ctx.arc(CX,CY,R,0,Math.PI*2); ctx.clip();
+
+  // grass
+  ctx.fillStyle = '#1a6b2f'; ctx.fillRect(0,0,W,H);
+  // stripes
+  for (let i=0;i<10;i++) {
+    ctx.fillStyle = i%2===0 ? 'rgba(0,0,0,0.05)' : 'transparent';
+    ctx.fillRect(i*(W/10),0,W/10,H);
+  }
+  // lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1;
+  for (let ri=1;ri<=3;ri++) {
+    ctx.beginPath(); ctx.arc(CX,CY,R*ri/4,0,Math.PI*2); ctx.stroke();
+  }
+  ctx.beginPath(); ctx.moveTo(CX-R,CY); ctx.lineTo(CX+R,CY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(CX,CY-R); ctx.lineTo(CX,CY+R); ctx.stroke();
+  ctx.restore();
+
+  // border
+  ctx.beginPath(); ctx.arc(CX,CY,R,0,Math.PI*2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 3; ctx.stroke();
+}
+
+function drawGoal() {
+  const gx = CX + Math.cos(goalAngle)*R;
+  const gy = CY + Math.sin(goalAngle)*R;
+  const tx = Math.cos(goalAngle+Math.PI/2), ty = Math.sin(goalAngle+Math.PI/2);
+  const nx = -Math.cos(goalAngle), ny = -Math.sin(goalAngle);
+  const hw = GOAL_W/2;
+  const p1x=gx+tx*hw, p1y=gy+ty*hw;
+  const p2x=gx-tx*hw, p2y=gy-ty*hw;
+  const p3x=p2x+nx*GOAL_DEPTH, p3y=p2y+ny*GOAL_DEPTH;
+  const p4x=p1x+nx*GOAL_DEPTH, p4y=p1y+ny*GOAL_DEPTH;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(p1x,p1y); ctx.lineTo(p4x,p4y);
+  ctx.lineTo(p3x,p3y); ctx.lineTo(p2x,p2y);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.stroke();
+
+  // net lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1;
+  for (let i=1;i<3;i++) {
+    ctx.beginPath();
+    ctx.moveTo(p1x+(p2x-p1x)*i/3, p1y+(p2y-p1y)*i/3);
+    ctx.lineTo(p4x+(p3x-p4x)*i/3, p4y+(p3y-p4y)*i/3);
+    ctx.stroke();
+  }
+  for (let i=1;i<3;i++) {
+    ctx.beginPath();
+    ctx.moveTo(p1x+(p4x-p1x)*i/3, p1y+(p4y-p1y)*i/3);
+    ctx.lineTo(p2x+(p3x-p2x)*i/3, p2y+(p3y-p2y)*i/3);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawBalls() {
+  balls_sim.forEach(b => {
+    ctx.save();
+    // shadow
+    ctx.beginPath(); ctx.arc(b.x+2,b.y+3,BALL_R,0,Math.PI*2);
+    ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.fill();
+    // ball
+    ctx.beginPath(); ctx.arc(b.x,b.y,BALL_R,0,Math.PI*2);
+    ctx.fillStyle = b.team==='A' ? 'rgba(46,204,113,0.9)' : 'rgba(231,76,60,0.9)';
+    ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.5)'; ctx.lineWidth=2; ctx.stroke();
+    ctx.font = `${BALL_R*1.15}px serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(b.flag, b.x, b.y+1);
+    ctx.restore();
+  });
+}
+
+function physicsStep() {
+  if (eventActive === 'freeze') return;
+
+  const windX = eventActive === 'wind' ? (Math.random()-0.5)*0.3 : 0;
+  const windY = eventActive === 'wind' ? (Math.random()-0.5)*0.3 : 0;
+
+  balls_sim.forEach(b => {
+    b.vx += windX; b.vy += windY;
+    b.x += b.vx; b.y += b.vy;
+
+    const dx=b.x-CX, dy=b.y-CY, d=Math.sqrt(dx*dx+dy*dy);
+    if (d+BALL_R > R) {
+      const nx=dx/d, ny=dy/d;
+      const dot=b.vx*nx+b.vy*ny;
+      b.vx -= 2*dot*nx; b.vy -= 2*dot*ny;
+      b.x = CX+nx*(R-BALL_R-0.5);
+      b.y = CY+ny*(R-BALL_R-0.5);
+    }
+
+    // maintain base speed
+    const sp = Math.sqrt(b.vx**2+b.vy**2);
+    const target = b.baseSpeed;
+    if (sp < target*0.5) { b.vx*=target*0.5/sp; b.vy*=target*0.5/sp; }
+    if (sp > target*2.5) { b.vx*=target*2.5/sp; b.vy*=target*2.5/sp; }
+    b.vx*=0.9998; b.vy*=0.9998;
+  });
+
+  // ball collision
+  const [b1,b2] = balls_sim;
+  const ddx=b1.x-b2.x, ddy=b1.y-b2.y;
+  const dd=Math.sqrt(ddx**2+ddy**2);
+  if (dd<BALL_R*2) {
+    const nx=ddx/dd, ny=ddy/dd;
+    const dv=(b1.vx-b2.vx)*nx+(b1.vy-b2.vy)*ny;
+    if (dv<0) {
+      const ratio_a = strengthA/(strengthA+strengthB);
+      const ratio_b = strengthB/(strengthA+strengthB);
+      b1.vx-=dv*nx*(0.5+ratio_a*0.5); b1.vy-=dv*ny*(0.5+ratio_a*0.5);
+      b2.vx+=dv*nx*(0.5+ratio_b*0.5); b2.vy+=dv*ny*(0.5+ratio_b*0.5);
+    }
+    const ov=BALL_R*2-dd;
+    b1.x+=nx*ov/2; b1.y+=ny*ov/2;
+    b2.x-=nx*ov/2; b2.y-=ny*ov/2;
+  }
+}
+
+// 按 AI 最终比分，在 90 分钟内随机安排进球时刻（强队倾向更早进球）
+function buildGoalSchedule(fa, fb) {
+  const list = [];
+  for (let i=0;i<fa;i++) list.push('A');
+  for (let i=0;i<fb;i++) list.push('B');
+  // Fisher-Yates 洗牌
+  for (let i=list.length-1;i>0;i--) {
+    const j=Math.floor(Math.random()*(i+1));
+    [list[i],list[j]]=[list[j],list[i]];
+  }
+  const minutes=[];
+  for (let i=0;i<list.length;i++) minutes.push(4 + Math.random()*84); // 4'~88'
+  minutes.sort((a,b)=>a-b);
+  return list.map((team,i)=>({ minute: minutes[i], team }));
+}
+
+// 当比赛时钟到达某个进球时刻：记分 + 把对应球射向球门做视觉表现
+function processScheduledGoals() {
+  while (scheduledGoals.length && matchMinute >= scheduledGoals[0].minute) {
+    const g = scheduledGoals.shift();
+    const t = g.team==='A' ? getTeam(selA.value) : getTeam(selB.value);
+    if (g.team==='A') { scoreA_sim++; document.getElementById('sbScoreA').textContent=scoreA_sim; }
+    else { scoreB_sim++; document.getElementById('sbScoreB').textContent=scoreB_sim; }
+    showEventTicker('⚽ ' + t.flag + ' ' + t.name + ' 进球！  ' + scoreA_sim + '-' + scoreB_sim);
+    addLog('⚽', t.name + ' 进球 (' + scoreA_sim + '-' + scoreB_sim + ')');
+    // 让进球方的球冲向当前球门，营造射门入网的观感
+    const b = balls_sim.find(x=>x.team===g.team);
+    if (b) {
+      const gx=CX+Math.cos(goalAngle)*R, gy=CY+Math.sin(goalAngle)*R;
+      const dx=gx-b.x, dy=gy-b.y, d=Math.hypot(dx,dy)||1, sp=5;
+      b.vx=dx/d*sp; b.vy=dy/d*sp;
+    }
+  }
+}
+
+let tickerTimer=0;
+function showEventTicker(msg) {
+  document.getElementById('eventTicker').textContent=msg;
+  tickerTimer=150;
+}
+
+function addLog(icon, msg) {
+  const minutes=Math.floor(matchMinute);
+  logEntries.unshift({icon, msg, time:minutes});
+  const log=document.getElementById('eventsLog');
+  log.innerHTML=logEntries.slice(0,15).map(e=>
+    `<div class="log-item"><span class="log-icon">${e.icon}</span><span class="log-time">${e.time}'</span><span>${e.msg}</span></div>`
+  ).join('');
+}
+
+let eventCooldown=0;
+function checkRandomEvent() {
+  if (eventCooldown>0) { eventCooldown--; return; }
+  if (eventTimer>0) { eventTimer--; if(eventTimer===0){eventActive=null;} return; }
+  for (const ev of RANDOM_EVENTS) {
+    if (Math.random()<ev.prob) {
+      eventActive=ev.effect;
+      eventTimer=120;
+      eventCooldown=300;
+      showEventTicker(ev.label);
+      addLog(ev.label.split(' ')[0], ev.label.replace(/^.\s/,''));
+      applyEvent(ev.effect);
+      break;
+    }
+  }
+}
+
+// 氛围事件只影响球的运动观感，不改变比分
+function applyEvent(effect) {
+  const [bA,bB]=balls_sim;
+  switch(effect) {
+    case 'wind': break; // 在 physicsStep 里持续施加
+    case 'speed_all': bA.vx*=1.3; bA.vy*=1.3; bB.vx*=1.3; bB.vy*=1.3; break;
+    case 'pulse': bA.vx*=1.15; bA.vy*=1.15; bB.vx*=1.15; bB.vy*=1.15; break;
+  }
+}
+
+function simLoop() {
+  if (!simRunning||simPaused) return;
+  simFrames++;
+  matchMinute = Math.min(90, simFrames * MIN_PER_FRAME);
+  goalAngle+=goalSpeed;
+  physicsStep();
+  processScheduledGoals();
+  checkRandomEvent();
+
+  drawField();
+  drawGoal();
+  drawBalls();
+
+  document.getElementById('sbTime').textContent=Math.floor(matchMinute)+"'";
+  if (tickerTimer>0) {
+    tickerTimer--;
+    if(tickerTimer===0) document.getElementById('eventTicker').textContent='';
+  }
+
+  if (matchMinute >= 90) { endSim(); return; }
+  animId=requestAnimationFrame(simLoop);
+}
+
+function startSim() {
+  const tA=getTeam(selA.value), tB=getTeam(selB.value);
+  scoreA_sim=0; scoreB_sim=0; simFrames=0; matchMinute=0; goalAngle=0;
+  logEntries=[]; eventActive=null; eventTimer=0; eventCooldown=0;
+  scheduledGoals = buildGoalSchedule(finalA, finalB);
+
+  document.getElementById('sbFlagA').textContent=tA.flag;
+  document.getElementById('sbNameA').textContent=tA.name;
+  document.getElementById('sbFlagB').textContent=tB.flag;
+  document.getElementById('sbNameB').textContent=tB.name;
+  document.getElementById('sbScoreA').textContent='0';
+  document.getElementById('sbScoreB').textContent='0';
+  document.getElementById('sbTarget').textContent='AI 预测 '+finalA+'-'+finalB;
+  document.getElementById('sbTime').textContent="0'";
+  document.getElementById('scFlagA').textContent=tA.flag;
+  document.getElementById('scFlagB').textContent=tB.flag;
+  const total=strengthA+strengthB;
+  document.getElementById('scBarA').style.width=(strengthA/total*100).toFixed(1)+'%';
+  document.getElementById('scBarB').style.width=(strengthB/total*100).toFixed(1)+'%';
+
+  document.getElementById('winnerBanner').classList.remove('visible');
+  document.getElementById('eventsLog').innerHTML='';
+  document.getElementById('eventTicker').textContent='比赛开始！';
+
+  document.getElementById('simArea').classList.add('visible');
+  document.getElementById('analysisPanel').classList.remove('visible');
+
+  if(idleAnimId) cancelAnimationFrame(idleAnimId);
+  initBalls();
+  simRunning=true; simPaused=false;
+  document.getElementById('btnPause').textContent='暂停';
+
+  if(animId) cancelAnimationFrame(animId);
+  simLoop();
+}
+
+function endSim() {
+  simRunning=false; cancelAnimationFrame(animId);
+  const tA=getTeam(selA.value), tB=getTeam(selB.value);
+  const banner=document.getElementById('winnerBanner');
+  banner.classList.add('visible');
+  if (scoreA_sim>scoreB_sim) {
+    document.getElementById('winnerName').textContent=tA.flag+' '+tA.name+' 获胜！';
+  } else if (scoreB_sim>scoreA_sim) {
+    document.getElementById('winnerName').textContent=tB.flag+' '+tB.name+' 获胜！';
+  } else {
+    document.getElementById('winnerName').textContent='平局！';
+  }
+  document.getElementById('winnerScore').textContent=scoreA_sim+' — '+scoreB_sim;
+  document.getElementById('winnerSub').textContent='AI 综合预测结果（实力 + 20% 随机因素）';
+  document.getElementById('eventTicker').textContent='全场比赛结束！';
+}
+
+document.getElementById('btnStartSim').addEventListener('click', startSim);
+
+document.getElementById('btnPause').addEventListener('click', () => {
+  simPaused=!simPaused;
+  document.getElementById('btnPause').textContent=simPaused?'继续':'暂停';
+  if(!simPaused) simLoop();
+});
+
+document.getElementById('btnSimReset').addEventListener('click', () => {
+  simRunning=false;
+  if(animId) cancelAnimationFrame(animId);
+  document.getElementById('simArea').classList.remove('visible');
+  document.getElementById('analysisPanel').classList.remove('visible');
+  document.getElementById('btnPredict').disabled=false;
+  document.getElementById('winnerBanner').classList.remove('visible');
+  startIdleLoop();
+});
+
+// ─── IDLE ANIMATION LOOP (旋转球门预览) ──────────────────────────────────────
+let idleAnimId = null;
+function idleLoop() {
+  if (simRunning) return;
+  goalAngle += 0.012;
+  drawField();
+  drawGoal();
+  // draw two static placeholder balls
+  const tA = getTeam(selA.value), tB = getTeam(selB.value);
+  [[CX-55, CY-40, tA?.flag||'🟢'], [CX+55, CY+40, tB?.flag||'🔴']].forEach(([x,y,flag]) => {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(x+2,y+3,BALL_R,0,Math.PI*2);
+    ctx.fillStyle='rgba(0,0,0,0.25)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(x,y,BALL_R,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,0.12)'; ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.3)'; ctx.lineWidth=2; ctx.stroke();
+    ctx.font=`${BALL_R*1.15}px serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(flag, x, y+1);
+    ctx.restore();
+  });
+  idleAnimId = requestAnimationFrame(idleLoop);
+}
+function startIdleLoop() {
+  if(idleAnimId) cancelAnimationFrame(idleAnimId);
+  idleLoop();
+}
+
+startIdleLoop();
+</script>
+</body>
+</html>
